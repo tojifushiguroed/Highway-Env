@@ -1,0 +1,79 @@
+# ============================
+# 🐍 Python
+# ============================
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ============================
+# 📦 Python Environments
+# ============================
+venv/
+.venv/
+.env/
+.env.*
+
+# ============================
+# 🧠 Training artifacts / logs
+# ============================
+tensorboard/
+logs/
+training/
+checkpoints/
+runs/
+wandb/
+
+# ============================
+# 📁 Models directory
+# ============================
+# Don’t ignore the models/ folder itself — keep models you want to share
+!models/
+# But ignore big model artifacts inside if needed, for example:
+models/**/*.pt
+models/**/*.pth
+models/**/*.ckpt
+
+# If you DO want to keep model zip files too, comment these:
+# !models/**/*.zip
+
+# ============================
+# 🖥️ OS / System
+# ============================
+.DS_Store
+Thumbs.db
+
+# ============================
+# 🧰 IDE / Editor
+# ============================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ============================
+# 🧪 Temporary
+# ============================
+*.tmp
+*.log
+
+# ============================
+# 📊 Data / outputs
+# ============================
+*.csv
+*.npy
+*.npz
+*.pkl
+
+# ============================
+# 🎥 Media
+# ============================
+assets/**/*.mp4
+assets/**/*.mov
+assets/**/*.avi
+
+# Keep GIFs for README demos:
+!assets/**/*.gif
