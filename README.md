@@ -275,6 +275,9 @@ make eval ENV=highway MODEL=models/highway_trained.zip
 make record ENV=highway MODEL=models/highway_trained.zip
 
 ## Project Structure
+## Project Structure
+
+```text
 Highway-Env/
 ├── assets/                  # Replay videos and GIFs for README
 │   ├── gif/
@@ -303,29 +306,40 @@ Highway-Env/
 ├── LICENSE
 ├── Makefile                 # Automation scripts
 ├── README.md                # Final Report
-├── highway_train.py
 ├── highway_test.py
+├── highway_train.py
 ├── merge+intersection_train.py
-├── parking_training.py
 ├── parking_test.py
-├── roundabout_training.py
-├── roundabout_test.py
-├── train_racetrack.py
+├── parking_training.py
 ├── racetrack_test.py
-├── test_merge.py
+├── requirements.txt         # Python dependencies
+├── roundabout_test.py
+├── roundabout_training.py
 ├── test_intersection.py
-├── requirements.txt
+├── test_merge.py
+├── train_racetrack.py
 └── utils.py                 # Helper functions
+```
 
 ## References
 Schulman, J., et al. (2017). Proximal Policy Optimization Algorithms. arXiv:1707.06347
 Haarnoja, T., et al. (2018). Soft Actor-Critic. arXiv:1801.01290
 Andrychowicz, M., et al. (2017). Hindsight Experience Replay. NeurIPS 2017
 Leurent, E. (2018). An Environment for Autonomous Driving Decision-Making. highway-env
+
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
+
 ## Acknowledgements
 highway-env by Edouard Leurent for the simulation framework.
 Stable Baselines3 for the RL algorithm implementations.
 Course Instructor: BARIŞ ÖZCAN for guidance and feedback.
 
+### Collaboration Note: ELİF DENİZ GÖLBOYU & BUSE YAZICI
+All key decisions including algorithm selection (PPO vs. SAC), reward shaping, observation design, training strategies, and result analysis were made jointly. Development, experimentation, and reporting were conducted collaboratively to ensure consistency and shared understanding of the system.
+WORK STRUCTURE:
+Co-designed the overall project methodology and environment selection.
+Contributed to the implementation and training of reinforcement learning agents across all environments.
+Participated in reward function design and iterative tuning based on observed agent behaviour.
+Took part in debugging, hyperparameter optimization, and performance evaluation.
+Co-authored the README and analysis sections, including interpretation of training results.
