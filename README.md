@@ -275,7 +275,6 @@ make eval ENV=highway MODEL=models/highway_trained.zip
 make record ENV=highway MODEL=models/highway_trained.zip
 
 ## Project Structure
-## Project Structure
 
 ```text
 Highway-Env/
@@ -343,3 +342,4 @@ Contributed to the implementation and training of reinforcement learning agents 
 Participated in reward function design and iterative tuning based on observed agent behaviour.
 Took part in debugging, hyperparameter optimization, and performance evaluation.
 Co-authored the README and analysis sections, including interpretation of training results.
+
