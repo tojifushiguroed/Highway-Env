@@ -14,7 +14,7 @@ The following demonstrates the agent's progression from random actions to a full
 ### 1. Highway Environment (High Speed)
 ![Highway](assests/gif/highway.gif)
 
-**Evolution Analysis (Left → Center → Right):**
+**Evolution Analysis:**
 
 * **Stage 1: Untrained (0 steps)**
     * **Behaviour:** Random lane changes, no speed control, frequent collisions.
@@ -128,14 +128,14 @@ The following demonstrates the agent's progression from random actions to a full
     * **Performance:** Reward ~5-20 (severe collision penalties).
     * **Failure mode:** Crashes before successfully crossing the intersection.
 
-* **Stage 2: Half-Trained (~100k steps) - SWEET SPOT**
+* **Stage 2: Half-Trained (~100k steps)** 
     * **Behavior:** Stops at red lights, proceeds cautiously on green. Very safe but slightly slow.
     * **What the agent learned:** Basic signal recognition and defensive driving.
     * **Performance:** Reward ~80-90 (high safety), **90% success rate.**
     * **Key Breakthrough:** Learned that "Red Light = Stop".
     * **Note:** This was effectively the best model for safety.
 
-* **Stage 3: Fully Trained (200k steps) - REGRESSION**
+* **Stage 3: Fully Trained (200k steps)**
     * **Behavior:** Aggressive rushing through intersections, running red lights to maintain velocity.
     * **What happened:** The agent optimized for "Speed Reward" over "Safety Penalty" in late training.
     * **Performance:** Reward ~106 (higher numerical reward but more crashes!), **Success rate dropped to 40%.**
@@ -155,14 +155,14 @@ The following demonstrates the agent's progression from random actions to a full
     * **Performance:** Reward ~5-10 (minimal survival time).
     * **Failure mode:** Off-track within 2 seconds.
 
-* **Stage 2: Half-Trained (~100k steps) - PEAK PERFORMANCE**
+* **Stage 2: Half-Trained (~100k steps)**
     * **Behavior:** Stays on track cautiously, slows down significantly before corners.
     * **What the agent learned:** CNN successfully learned track edge detection and cornering.
     * **Performance:** Reward ~15-20 (best performance window), **50% success rate.**
     * **Key Breakthrough:** Learned to brake before turns.
     * **Note:** This model should have been saved as the final version.
 
-* **Stage 3: Fully Trained (200k steps) - CATASTROPHIC FORGETTING**
+* **Stage 3: Fully Trained (200k steps)**
     * **Behavior:** Attempts high speed but cuts corners and goes off-track.
     * **What happened:** The neural network overwrote the safe cornering policy while trying to optimize for higher speed.
     * **Performance:** Reward ~11 (lower than half-trained!), **Success rate degraded to 30%.**
@@ -172,7 +172,7 @@ The following demonstrates the agent's progression from random actions to a full
 
 ## Methodology
 
-### 1. Algorithms & Architecture
+#### 1. Algorithms & Architecture
 We utilized two distinct Reinforcement Learning algorithms tailored to the specific action spaces:
 
 * **PPO (Proximal Policy Optimization):**
@@ -186,13 +186,13 @@ We utilized two distinct Reinforcement Learning algorithms tailored to the speci
     * **Architecture:** Actor [256, 256], Twin Critic [256, 256].
     * **Input:** KinematicsGoal (Parking) or OccupancyGrid Image (Racetrack).
 
-### 2. Observation Space ("The Eyes")
+#### 2. Observation Space ("The Eyes")
 * **Kinematics:** The agent perceives the $V$ nearest vehicles as a vector list:
     $$O = \{ (x, y, v_x, v_y, P)_{i} \}_{i=1}^{V}$$
     Where $x, y$ are positions, $v_x, v_y$ are velocities, and $P$ is a presence flag.
 * **OccupancyGrid:** A grid-based image representation of the track processed via a CNN.
 
-### 3. Reward Function ("The Motivation")
+#### 3. Reward Function ("The Motivation")
 For the Highway environment, the total reward $R_t$ at timestep $t$ is calculated as:
 
 $$R(s, a) = \underbrace{\alpha \cdot \frac{v - v_{min}}{v_{max} - v_{min}}}_{\text{High Speed}} - \underbrace{\beta \cdot \mathbb{I}_{collision}}_{\text{Collision penalty}} - \underbrace{\gamma \cdot \mathbb{I}_{lane\_change}}_{\text{Stability}}$$
@@ -208,8 +208,8 @@ $$R(s, a) = \underbrace{\alpha \cdot \frac{v - v_{min}}{v_{max} - v_{min}}}_{\te
 
 Below is the training performance across all environments over 200,000+ timesteps.
 
-![Tensorboard](assests/tensorboard.gif)
-*[Figure 1: TensorBoard metrics showing Mean Episode Reward (Center), Episode Length (Left), and Success Rate (Right).]*
+![Tensorboard](assests/tensorboard.png)
+*[Figure 1: TensorBoard metrics.]*
 
 ### Analysis by Environment
 1.  **Highway (Cyan Line):** The Star Performer. Reached **100% Success Rate** and maximum reward (~220). Stable ascent after removing `lane_change_reward`.
@@ -225,13 +225,13 @@ Below is the training performance across all environments over 200,000+ timestep
 **Problem:** The agent constantly switched lanes even on empty roads because of a small positive reward (+1) for lane changes.
 **Solution:** Set `lane_change_reward` to 0 and added a steering penalty.
 
-# Before (Episodes 1-50)
+##### Before (Episodes 1-50)
 config = {
     "lane_change_reward": 1.0,    # Encouraged zig-zagging
     "vehicles_count": 120         # Too dense
 }
 
-# After (Episodes 51+)
+##### After (Episodes 51+)
 config = {
     "lane_change_reward": 0.0,    # Neutral on lane changes
     "vehicles_count": 50,         # Optimal density
@@ -248,29 +248,29 @@ Solution: Implemented Early Stopping (saving the model at Step 100k) and future 
 
 ## Installation & Usage
 This project uses a Makefile for clean automation.
-1. Setup
-# Clone the repository
+###1. Setup
+##### Clone the repository
 git clone [https://github.com/tojifushiguroed/Highway-Env.git](https://github.com/tojifushiguroed/Highway-Env.git)
 cd Highway-Env
 
-# Install dependencies and setup virtual environment
+##### Install dependencies and setup virtual environment
 make install
 
 ### 2. Training
-# Train Highway agent with PPO
+##### Train Highway agent with PPO
 make train ENV=highway
 
-# Train Parking agent with SAC+HER
+##### Train Parking agent with SAC+HER
 make train ENV=parking ALGO=sac
 
-# Resume from checkpoint
+##### Resume from checkpoint
 make train ENV=highway CHECKPOINT=models/highway_100k.zip
 
 ### 3. Evaluation
-# Evaluate trained model
+##### Evaluate trained model
 make eval ENV=highway MODEL=models/highway_trained.zip
 
-# Record evaluation videos
+##### Record evaluation videos
 make record ENV=highway MODEL=models/highway_trained.zip
 
 ## Project Structure
