@@ -1,0 +1,331 @@
+# Autonomous Driving with Deep Reinforcement Learning
+
+**Author:** [ELİF DENİZ GÖLBOYU / tojifushiguroed]  [BUSE YAZICI / bsyyzc]
+**Course:** Autonomous Driving & Reinforcement Learning Final Project
+
+This project implements and trains autonomous driving agents across multiple scenarios (**Highway, Roundabout, Parking, Intersection, Racetrack**) using **Proximal Policy Optimization (PPO)** and **Soft Actor-Critic (SAC)**. The goal is to navigate complex traffic environments safely and efficiently using the `highway-env` simulation framework.
+
+---
+
+## Evolution of Learning
+
+The following demonstrates the agent's progression from random actions to a fully trained autonomous driver.
+
+### 1. Highway Environment (High Speed)
+![Highway](assests/gif/highway.gif)
+
+**Evolution Analysis (Left → Center → Right):**
+
+* **Stage 1: Untrained (0 steps)**
+    * **Behaviour:** Random lane changes, no speed control, frequent collisions.
+    * **What the agent sees:** The kinematics observation is just noise—it doesn't understand the concept of "lanes" or "other vehicles".
+    * **Performance:** Reward ~20-50 (mostly from survival time before crash).
+    * **Failure mode:** Crashes within 3-5 seconds.
+
+* **Stage 2: Half-Trained (~100k steps)**
+    * **Behaviour:** Maintains lane but hesitant to overtake, sub-optimal speed (~35 m/s).
+    * **What the agent learned:** Collision avoidance basics, but still overly conservative.
+    * **Performance:** Reward ~140-160 (improving but not maximized).
+    * **Key Breakthrough:** Discovered that "staying in lane = positive reward".
+    * **Remaining issue:** Doesn't understand when overtaking is safe.
+
+* **Stage 3: Fully Trained (200k steps)**
+    * **Behaviour:** Aggressive but safe overtaking, maintains 40-45 m/s consistently.
+    * **What the agent mastered:** Perfect anticipation of slower vehicles, minimal unnecessary lane changes.
+    * **Performance:** Reward 220 (near-optimal performance), 100% success rate.
+    * **Mastery Indicator:** Only changes lanes when necessary for speed maintenance.
+    * **Training insight:** Removing `lane_change_reward` eliminated the "zig-zag" phenomenon.
+
+---
+
+### 2. Parking Environment
+![Parking](assests/gif/parking.gif)
+
+**Evolution Analysis:**
+
+* **Stage 1: Untrained (0 steps)**
+    * **Behaviour:** Random steering and acceleration, often drives away from the parking spot.
+    * **What the agent sees:** Goal position is visible but meaningless—no understanding of parking orientation.
+    * **Performance:** Reward -10 to -15, 0% success rate.
+    * **Failure mode:** Never even gets close to the parking spot.
+
+* **Stage 2: Half-Trained (~100k steps)**
+    * **Behaviour:** Approaches the parking spot but struggles with the final alignment and angle.
+    * **What the agent learned:** HER (Hindsight Experience Replay) starting to work—agent learns from "accidental" positions.
+    * **Performance:** Reward -2 to -5, 60-70% success rate.
+    * **Key Breakthrough:** Learned reverse parking motion and basic angle control.
+
+* **Stage 3: Fully Trained (200k steps)**
+    * **Behaviour:** Smooth one-shot parallel parking with precise angle control.
+    * **Performance:** Reward -0.5 (minimal final distance to goal), 100% success rate.
+    * **Mastery Indicator:** Completes parking in <15 seconds with single maneuver.
+    * **Training insight:** SAC+HER was critical—standard PPO completely failed at this task.
+
+---
+
+### 3. Roundabout Environment
+![Roundabout](assests/gif/roundabout.gif)
+
+**Evolution Analysis:**
+
+* **Stage 1: Untrained (0 steps)**
+    * **Behavior:** Drives straight into roundabout barriers, completely ignores circular flow.
+    * **What the agent sees:** No comprehension of roundabout geometry or right-of-way rules.
+    * **Performance:** Reward ~10-30 (immediate collision penalties).
+    * **Failure mode:** Crashes before completing the first turn.
+
+* **Stage 2: Half-Trained (~100k steps)**
+    * **Behavior:** Follows the circular shape but yields excessively to other vehicles, often stopping inside the roundabout.
+    * **What the agent learned:** Basic circular navigation and collision avoidance.
+    * **Performance:** Reward ~40-50 (avoids crashes but drives slowly), 50-60% success rate.
+    * **Key Breakthrough:** Discovered how to follow the lane curvature.
+    * **Remaining issue:** Too defensive—stops when merging would be safe.
+
+* **Stage 3: Fully Trained (200k steps)**
+    * **Behavior:** Smooth entry, maintains speed through the circle, adjusts exit timing perfectly.
+    * **What the agent mastered:** Balances yielding to traffic while maintaining traffic flow.
+    * **Performance:** Reward ~58 (good speed-safety tradeoff), 75% success rate.
+    * **Mastery Indicator:** Navigates the full roundabout without unnecessary stops.
+    * **Training insight:** 75% success is near-optimal here; remaining failures are due to unpredictable/aggressive external vehicles.
+
+---
+
+### 4. Merge Environment
+![Merge](assests/gif/merge.gif)
+
+**Evolution Analysis:**
+
+* **Stage 1: Untrained (0 steps)**
+    * **Behavior:** Merges blindly without checking highway traffic, causing immediate collisions.
+    * **What the agent sees:** No awareness of merge gap timing or vehicle relative speeds.
+    * **Performance:** Reward ~30-40 (collision penalties dominate).
+    * **Failure mode:** T-bones highway traffic within 2 seconds of merge attempt.
+
+* **Stage 2: Half-Trained (~100k steps)**
+    * **Behavior:** Waits for extremely large gaps, misses optimal merge opportunities, causing traffic buildup.
+    * **What the agent learned:** Basic gap detection and collision checking.
+    * **Performance:** Reward ~60-70 (successful but slow merges), 70% success rate.
+    * **Key Breakthrough:** Discovered "speed matching" (accelerating to join the flow).
+    * **Remaining issue:** Overly conservative—hesitates to enter tight gaps.
+
+* **Stage 3: Fully Trained (200k steps)**
+    * **Behavior:** Aggressive but safe merging; accelerates to match highway speed perfectly.
+    * **What the agent mastered:** Optimal gap identification and precise merge timing.
+    * **Performance:** Reward ~74 (near-maximum efficiency), 100% success rate.
+    * **Mastery Indicator:** Completes merge within 3-5 seconds without disrupting highway flow.
+    * **Training insight:** Once the agent learns to match speed, the policy becomes very stable.
+
+---
+
+### 5. Intersection Environment (Regression Detected)
+![Intersection](assests/gif/intersection.gif)
+
+**Evolution Analysis:**
+
+* **Stage 1: Untrained (0 steps)**
+    * **Behavior:** Drives through red lights, ignores cross-traffic, constant T-bone crashes.
+    * **What the agent sees:** No understanding of traffic signals or right-of-way rules.
+    * **Performance:** Reward ~5-20 (severe collision penalties).
+    * **Failure mode:** Crashes before successfully crossing the intersection.
+
+* **Stage 2: Half-Trained (~100k steps) - SWEET SPOT**
+    * **Behavior:** Stops at red lights, proceeds cautiously on green. Very safe but slightly slow.
+    * **What the agent learned:** Basic signal recognition and defensive driving.
+    * **Performance:** Reward ~80-90 (high safety), **90% success rate.**
+    * **Key Breakthrough:** Learned that "Red Light = Stop".
+    * **Note:** This was effectively the best model for safety.
+
+* **Stage 3: Fully Trained (200k steps) - REGRESSION**
+    * **Behavior:** Aggressive rushing through intersections, running red lights to maintain velocity.
+    * **What happened:** The agent optimized for "Speed Reward" over "Safety Penalty" in late training.
+    * **Performance:** Reward ~106 (higher numerical reward but more crashes!), **Success rate dropped to 40%.**
+    * **Problem Identified:** Collision penalty ($\beta=50$) is too weak relative to the speed reward.
+    * **Fix Needed:** Increase $\beta$ to 100 and reduce speed weight $\alpha$.
+
+---
+
+### 6. Racetrack Environment
+![Racetrack](assests/gif/racetrack.gif)
+
+**Evolution Analysis:**
+
+* **Stage 1: Untrained (0 steps)**
+    * **Behavior:** Drives off track immediately, no understanding of track boundaries.
+    * **What the agent sees:** The CNN processes the OccupancyGrid but sees only noise—no feature recognition.
+    * **Performance:** Reward ~5-10 (minimal survival time).
+    * **Failure mode:** Off-track within 2 seconds.
+
+* **Stage 2: Half-Trained (~100k steps) - PEAK PERFORMANCE**
+    * **Behavior:** Stays on track cautiously, slows down significantly before corners.
+    * **What the agent learned:** CNN successfully learned track edge detection and cornering.
+    * **Performance:** Reward ~15-20 (best performance window), **50% success rate.**
+    * **Key Breakthrough:** Learned to brake before turns.
+    * **Note:** This model should have been saved as the final version.
+
+* **Stage 3: Fully Trained (200k steps) - CATASTROPHIC FORGETTING**
+    * **Behavior:** Attempts high speed but cuts corners and goes off-track.
+    * **What happened:** The neural network overwrote the safe cornering policy while trying to optimize for higher speed.
+    * **Performance:** Reward ~11 (lower than half-trained!), **Success rate degraded to 30%.**
+    * **Problem Identified:** Constant learning rate ($3 \times 10^{-4}$) caused the agent to "forget" safety features.
+    * **Lesson:** Early stopping is crucial for vision-based tasks to prevent overfitting/forgetting.
+---
+
+## Methodology
+
+### 1. Algorithms & Architecture
+We utilized two distinct Reinforcement Learning algorithms tailored to the specific action spaces:
+
+* **PPO (Proximal Policy Optimization):**
+    * **Used for:** Highway, Roundabout, Merge, Intersection.
+    * **Architecture:**SB3 default MlpPolicy (actor–critic MLP).
+    * **Input:** Flattened kinematics vector (5 vehicles × 5 features = 25 dimensions).
+    * **Output:** 5 discrete actions (LANE_LEFT, IDLE, LANE_RIGHT, FASTER, SLOWER).
+
+* **SAC (Soft Actor-Critic):**
+    * **Used for:** Parking (with **HER**) and Racetrack (with **CNN**).
+    * **Architecture:** Actor [256, 256], Twin Critic [256, 256].
+    * **Input:** KinematicsGoal (Parking) or OccupancyGrid Image (Racetrack).
+
+### 2. Observation Space ("The Eyes")
+* **Kinematics:** The agent perceives the $V$ nearest vehicles as a vector list:
+    $$O = \{ (x, y, v_x, v_y, P)_{i} \}_{i=1}^{V}$$
+    Where $x, y$ are positions, $v_x, v_y$ are velocities, and $P$ is a presence flag.
+* **OccupancyGrid:** A grid-based image representation of the track processed via a CNN.
+
+### 3. Reward Function ("The Motivation")
+For the Highway environment, the total reward $R_t$ at timestep $t$ is calculated as:
+
+$$R(s, a) = \underbrace{\alpha \cdot \frac{v - v_{min}}{v_{max} - v_{min}}}_{\text{High Speed}} - \underbrace{\beta \cdot \mathbb{I}_{collision}}_{\text{Collision penalty}} - \underbrace{\gamma \cdot \mathbb{I}_{lane\_change}}_{\text{Stability}}$$
+
+**Hyperparameters:**
+* $\alpha$ (Speed Weight): **1.0** (Mapped to range [30, 45] m/s)
+* $\beta$ (Collision Penalty): **50** (Severe punishment to prioritize safety)
+* $\gamma$ (Lane Change Reward): **0** (Disabled to prevent unnecessary weaving)
+
+---
+
+## Training Analysis
+
+Below is the training performance across all environments over 200,000+ timesteps.
+
+![Tensorboard](assests/tensorboard.gif)
+*[Figure 1: TensorBoard metrics showing Mean Episode Reward (Center), Episode Length (Left), and Success Rate (Right).]*
+
+### Analysis by Environment
+1.  **Highway (Cyan Line):** The Star Performer. Reached **100% Success Rate** and maximum reward (~220). Stable ascent after removing `lane_change_reward`.
+2.  **Parking (Pink Line):** Precision Achieved. **100% Success Rate**. HER was critical; reward stabilized at -0.5 (minimal distance).
+3.  **Racetrack (Grey Line):** Catastrophic Forgetting. Peaked at 50% success (Step ~100k), then degraded to 30% as the agent tried to optimize speed and overwrote safe cornering policies.
+4.  **Intersection (Green Line):** Aggression Issues. Success rate dropped from 90% to 40% in late stages because the agent prioritized speed over safety.
+
+---
+
+## Challenges & Solutions
+
+### Challenge 1: The "Zig-Zag" Phenomenon (Highway)
+**Problem:** The agent constantly switched lanes even on empty roads because of a small positive reward (+1) for lane changes.
+**Solution:** Set `lane_change_reward` to 0 and added a steering penalty.
+
+# Before (Episodes 1-50)
+config = {
+    "lane_change_reward": 1.0,    # Encouraged zig-zagging
+    "vehicles_count": 120         # Too dense
+}
+
+# After (Episodes 51+)
+config = {
+    "lane_change_reward": 0.0,    # Neutral on lane changes
+    "vehicles_count": 50,         # Optimal density
+}
+
+### Challenge 2: Sparse Rewards in Parking
+Problem: Random exploration rarely succeeds (success rate < 1% with naive PPO).
+Solution: Switched to SAC with Hindsight Experience Replay (HER). HER allows the agent to "pretend" that a random failure spot was the actual goal, enabling learning from failures.
+Result: Training efficiency improved by 300%.
+### Challenge 3: Catastrophic Forgetting in Racetrack
+Problem: Performance degraded from 50% to 30% after Episode 120.
+Root Cause: The learning rate ($3 \times 10^{-4}$) was too high for fine-tuning, causing the policy to overwrite the "safe driving" behavior found earlier.
+Solution: Implemented Early Stopping (saving the model at Step 100k) and future plans for cosine learning rate decay.
+
+## Installation & Usage
+This project uses a Makefile for clean automation.
+1. Setup
+# Clone the repository
+git clone [https://github.com/tojifushiguroed/Highway-Env.git](https://github.com/tojifushiguroed/Highway-Env.git)
+cd Highway-Env
+
+# Install dependencies and setup virtual environment
+make install
+
+### 2. Training
+# Train Highway agent with PPO
+make train ENV=highway
+
+# Train Parking agent with SAC+HER
+make train ENV=parking ALGO=sac
+
+# Resume from checkpoint
+make train ENV=highway CHECKPOINT=models/highway_100k.zip
+
+### 3. Evaluation
+# Evaluate trained model
+make eval ENV=highway MODEL=models/highway_trained.zip
+
+# Record evaluation videos
+make record ENV=highway MODEL=models/highway_trained.zip
+
+## Project Structure
+Highway-Env/
+├── assests/                 # Replay videos and GIFs for README
+	├──gif/
+		├──highway.gif
+├──intersection.gif
+├──merge.gif
+├──parking.gif
+├──racetrack.gif
+├──roundabout.gif
+
+	├──mp4/
+		├──highway.mp4
+├──intersection.mp4
+├──merge.mp4
+├──parking.mp4
+├──racetrack.mp4
+├──roundabout.mp4
+
+	├──tensorboard.png
+├── models/                  # Saved model checkpoints (.zip)
+	├──highway_aggressive.zip
+├──intersection_model.zip
+├──merge_model.zip
+├──parking_best_model.zip
+├──racetrack_best_model.zip
+├──roundabout_best_model.zip
+├── .gitignore
+├── LICENSE
+├── Makefile                 # Automation scripts
+├── README.md                # Final Report
+├── highway_test.py          
+├── highway_train.py        
+├── merge+intersection_train.py
+├── parking_test.py
+├── parking_training.py
+├── racetrack_test.py
+├── requirements.txt         # Python dependencies
+├── roundabout_test.py
+├── roundabout_training.py
+├── test_intersection.py
+├── test_merge.py
+├── train_racetrack.py
+└── utils.py                 # Helper functions
+
+## References
+Schulman, J., et al. (2017). Proximal Policy Optimization Algorithms. arXiv:1707.06347
+Haarnoja, T., et al. (2018). Soft Actor-Critic. arXiv:1801.01290
+Andrychowicz, M., et al. (2017). Hindsight Experience Replay. NeurIPS 2017
+Leurent, E. (2018). An Environment for Autonomous Driving Decision-Making. highway-env
+## License
+This project is licensed under the MIT License - see the LICENSE file for details.
+## Acknowledgements
+highway-env by Edouard Leurent for the simulation framework.
+Stable Baselines3 for the RL algorithm implementations.
+Course Instructor: BARIŞ ÖZCAN for guidance and feedback.
