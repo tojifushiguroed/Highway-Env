@@ -1,6 +1,7 @@
 # Autonomous Driving with Deep Reinforcement Learning
 
-**Author:** [ELİF DENİZ GÖLBOYU / tojifushiguroed]  [BUSE YAZICI / bsyyzc]
+**Author:** ELİF DENİZ GÖLBOYU/tojifushiguroed  & BUSE YAZICI/bsyyzc
+
 **Course:** Autonomous Driving & Reinforcement Learning Final Project
 
 This project implements and trains autonomous driving agents across multiple scenarios (**Highway, Roundabout, Parking, Intersection, Racetrack**) using **Proximal Policy Optimization (PPO)** and **Soft Actor-Critic (SAC)**. The goal is to navigate complex traffic environments safely and efficiently using the `highway-env` simulation framework.
@@ -275,47 +276,45 @@ make record ENV=highway MODEL=models/highway_trained.zip
 
 ## Project Structure
 Highway-Env/
-├── assests/                 # Replay videos and GIFs for README
-	├──gif/
-		├──highway.gif
-├──intersection.gif
-├──merge.gif
-├──parking.gif
-├──racetrack.gif
-├──roundabout.gif
-
-	├──mp4/
-		├──highway.mp4
-├──intersection.mp4
-├──merge.mp4
-├──parking.mp4
-├──racetrack.mp4
-├──roundabout.mp4
-
-	├──tensorboard.png
+├── assets/                  # Replay videos and GIFs for README
+│   ├── gif/
+│   │   ├── highway.gif
+│   │   ├── intersection.gif
+│   │   ├── merge.gif
+│   │   ├── parking.gif
+│   │   ├── racetrack.gif
+│   │   └── roundabout.gif
+│   ├── mp4/
+│   │   ├── highway.mp4
+│   │   ├── intersection.mp4
+│   │   ├── merge.mp4
+│   │   ├── parking.mp4
+│   │   ├── racetrack.mp4
+│   │   └── roundabout.mp4
+│   └── tensorboard.png
 ├── models/                  # Saved model checkpoints (.zip)
-	├──highway_aggressive.zip
-├──intersection_model.zip
-├──merge_model.zip
-├──parking_best_model.zip
-├──racetrack_best_model.zip
-├──roundabout_best_model.zip
+│   ├── highway_aggressive.zip
+│   ├── intersection_model.zip
+│   ├── merge_model.zip
+│   ├── parking_best_model.zip
+│   ├── racetrack_best_model.zip
+│   └── roundabout_best_model.zip
 ├── .gitignore
 ├── LICENSE
 ├── Makefile                 # Automation scripts
 ├── README.md                # Final Report
-├── highway_test.py          
-├── highway_train.py        
+├── highway_train.py
+├── highway_test.py
 ├── merge+intersection_train.py
-├── parking_test.py
 ├── parking_training.py
-├── racetrack_test.py
-├── requirements.txt         # Python dependencies
-├── roundabout_test.py
+├── parking_test.py
 ├── roundabout_training.py
-├── test_intersection.py
-├── test_merge.py
+├── roundabout_test.py
 ├── train_racetrack.py
+├── racetrack_test.py
+├── test_merge.py
+├── test_intersection.py
+├── requirements.txt
 └── utils.py                 # Helper functions
 
 ## References
@@ -329,3 +328,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 highway-env by Edouard Leurent for the simulation framework.
 Stable Baselines3 for the RL algorithm implementations.
 Course Instructor: BARIŞ ÖZCAN for guidance and feedback.
+
