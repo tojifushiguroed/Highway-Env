@@ -173,35 +173,63 @@ The following demonstrates the agent's progression from random actions to a full
 
 ## Methodology
 
-#### 1. Algorithms & Architecture
-We utilized two distinct Reinforcement Learning algorithms tailored to the specific action spaces:
+### 1. Algorithms & Architecture
+We selected algorithms based on the nature of the action space (Discrete vs. Continuous) and the specific challenges of each environment.
 
-* **PPO (Proximal Policy Optimization):**
-    * **Used for:** Highway, Roundabout, Merge, Intersection.
-    * **Architecture:**SB3 default MlpPolicy (actor–critic MLP).
-    * **Input:** Flattened kinematics vector (5 vehicles × 5 features = 25 dimensions).
-    * **Output:** 5 discrete actions (LANE_LEFT, IDLE, LANE_RIGHT, FASTER, SLOWER).
+#### **A. PPO (Proximal Policy Optimization)**
+* **Applied Environments:** Highway, Roundabout, Merge, Intersection.
+* **Action Space:** **Discrete Meta-Actions** (`LANE_LEFT`, `IDLE`, `LANE_RIGHT`, `FASTER`, `SLOWER`).
+* **Why PPO? (Rationale):**
+    * **Stability:** These environments require high-level tactical decisions rather than fine motor control. PPO is the industry standard for on-policy learning because its "clipping" mechanism prevents drastic policy updates that could destabilize training.
+    * **Sample Efficiency:** Since we use a lightweight Kinematics observation, we can generate samples very fast. PPO effectively exploits this high throughput without the hyperparameter sensitivity of DQN.
+* **Architecture:**
+    * **Policy:** `MlpPolicy` (SB3 Default). Since the input is a low-dimensional vector (Kinematics), a simple Multi-Layer Perceptron is sufficient and computationally efficient.
+    * **Input:** Flattened kinematics vector ($5 \text{ vehicles} \times 5 \text{ features} = 25 \text{ dimensions}$).
 
-* **SAC (Soft Actor-Critic):**
-    * **Used for:** Parking (with **HER**) and Racetrack (with **CNN**).
-    * **Architecture:** Actor [256, 256], Twin Critic [256, 256].
-    * **Input:** KinematicsGoal (Parking) or OccupancyGrid Image (Racetrack).
+#### **B. SAC (Soft Actor-Critic)**
+* **Applied Environments:** Parking, Racetrack.
+* **Action Space:** **Continuous Control** (Steering angle $\in [-1, 1]$, Acceleration $\in [-1, 1]$).
+* **Why SAC? (Rationale):**
+    * **Precision:** The Parking task requires precise low-speed maneuvering, and Racetrack requires smooth steering. PPO's discrete nature causes "jerky" movements here. SAC outputs continuous values, allowing for smooth and precise control.
+    * **Exploration:** SAC maximizes **Entropy** (randomness) alongside reward. This prevents the agent from getting stuck in local optima (e.g., stopping near a parking spot but not entering it) by encouraging it to try diverse strategies.
+    * **Integration with HER:** For the Parking task, rewards are sparse (you only get points if you succeed). We combined SAC with **Hindsight Experience Replay (HER)**, which allows the agent to learn from failure by treating failed attempts as successful "virtual" goals.
 
-#### 2. Observation Space ("The Eyes")
-* **Kinematics:** The agent perceives the $V$ nearest vehicles as a vector list:
+---
+
+### 2. Observation Space ("The Eyes")
+We utilized two distinct observation strategies to balance computational efficiency with environmental complexity.
+
+#### **A. Kinematics (Vector-Based)**
+* **Used in:** Highway, Merge, Roundabout, Intersection.
+* **Definition:** The agent perceives the $V$ nearest vehicles as a list of vectors:
     $$O = \{ (x, y, v_x, v_y, P)_{i} \}_{i=1}^{V}$$
-    Where $x, y$ are positions, $v_x, v_y$ are velocities, and $P$ is a presence flag.
-* **OccupancyGrid:** A grid-based image representation of the track processed via a CNN.
+* **Why Kinematics?**
+    * **Efficiency:** Processing a $25$-dimensional vector is significantly faster than processing images (pixels). This allowed us to train over 200k steps in minutes rather than hours.
+    * **Relevance:** In highway driving, the "texture" of the road or the color of the sky is irrelevant. Only the relative positions and velocities matter.
 
-#### 3. Reward Function ("The Motivation")
-For the Highway environment, the total reward $R_t$ at timestep $t$ is calculated as:
+#### **B. OccupancyGrid (Image-Based)**
+* **Used in:** Racetrack.
+* **Definition:** A binary grid-based image representing the road boundaries and obstacles, processed via a **CNN (Convolutional Neural Network)**.
+* **Why OccupancyGrid?**
+    * Unlike the Highway, the Racetrack has arbitrary curves and geometry. A simple list of vehicle coordinates is insufficient because the agent needs to "see" the shape of the upcoming turn to determine the optimal racing line.
+
+---
+
+### 3. Reward Function ("The Motivation")
+Designing the reward function was the most critical part of the tuning process. For the Highway environment, we designed a composite function:
 
 $$R(s, a) = \underbrace{\alpha \cdot \frac{v - v_{min}}{v_{max} - v_{min}}}_{\text{High Speed}} - \underbrace{\beta \cdot \mathbb{I}_{collision}}_{\text{Collision penalty}} - \underbrace{\gamma \cdot \mathbb{I}_{lane\_change}}_{\text{Stability}}$$
 
-**Hyperparameters:**
-* $\alpha$ (Speed Weight): **1.0** (Mapped to range [30, 45] m/s)
-* $\beta$ (Collision Penalty): **50** (Severe punishment to prioritize safety)
-* $\gamma$ (Lane Change Reward): **0** (Disabled to prevent unnecessary weaving)
+#### **Hyperparameter Rationale:**
+
+* **$\alpha = 1.0$ (Speed Weight):**
+    * We normalized the speed to a $[0, 1]$ range. This ensures the reward is scale-invariant and helps the neural network converge faster compared to using raw speed values (e.g., 30 m/s).
+
+* **$\beta = 50$ (Collision Penalty):**
+    * **Why so high?** A standard penalty (e.g., -1 or -10) was insufficient. The agent would calculate that driving at max speed for 20 seconds (+20 reward) was worth a crash (-10). Setting $\beta=50$ makes a collision "catastrophic," forcing the agent to prioritize safety above all else.
+
+* **$\gamma = 0$ (Lane Change Penalty):**
+    * **The "Zig-Zag" Fix:** Initially, we gave a small positive reward for changing lanes to encourage overtaking. However, this caused the agent to weave dangerously even on empty roads (Intrinsic Motivation). By setting this to 0 (or adding a small penalty in code), we forced the agent to treat lane changes purely as a *tool* to maintain speed, not a goal in itself.
 
 ---
 
@@ -209,7 +237,7 @@ $$R(s, a) = \underbrace{\alpha \cdot \frac{v - v_{min}}{v_{max} - v_{min}}}_{\te
 
 The following is the training performance across all environments over 200,000+ timesteps.
 
-![Tensorboard](assets/tensorboard.png)
+![Tensorboard](assests/tensorboard.png)
 *[Figure 1: TensorBoard metrics showing Mean Episode Reward (Center), Episode Length (Left), and Success Rate (Right).]*
 
 ### Analysis by Environment
@@ -362,5 +390,6 @@ Contributed to the implementation and training of reinforcement learning agents 
 Participated in reward function design and iterative tuning based on observed agent behaviour.
 Took part in debugging, hyperparameter optimization, and performance evaluation.
 Co-authored the README and analysis sections, including interpretation of training results.
+
 
 
