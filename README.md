@@ -207,16 +207,36 @@ $$R(s, a) = \underbrace{\alpha \cdot \frac{v - v_{min}}{v_{max} - v_{min}}}_{\te
 
 ## Training Analysis
 
-Below is the training performance across all environments over 200,000+ timesteps.
+The following is the training performance across all environments over 200,000+ timesteps.
 
-![Tensorboard](assests/tensorboard.png)
-*[Figure 1: TensorBoard metrics.]*
+![Tensorboard](assets/tensorboard.png)
+*[Figure 1: TensorBoard metrics showing Mean Episode Reward (Center), Episode Length (Left), and Success Rate (Right).]*
 
 ### Analysis by Environment
-1.  **Highway (Cyan Line):** The Star Performer. Reached **100% Success Rate** and maximum reward (~220). Stable ascent after removing `lane_change_reward`.
-2.  **Parking (Pink Line):** Precision Achieved. **100% Success Rate**. HER was critical; reward stabilized at -0.5 (minimal distance).
-3.  **Racetrack (Grey Line):** Catastrophic Forgetting. Peaked at 50% success (Step ~100k), then degraded to 30% as the agent tried to optimize speed and overwrote safe cornering policies.
-4.  **Intersection (Green Line):** Aggression Issues. Success rate dropped from 90% to 40% in late stages because the agent prioritized speed over safety.
+
+1.  **Highway (Cyan Line): The Benchmark for Stability**
+    * **Performance:** Reached **100% Success Rate** and a maximum reward of **~220** by step 150k.
+    * **Insight:** The learning curve shows a steady ascent with minimal variance. The key factor was setting `lane_change_reward = 0`, which eliminated the agent's initial "zig-zag" behavior. The agent learned that maintaining high speed (45 m/s) in a single lane is more optimal than constant weaving.
+
+2.  **Parking (Pink Line): The Triumph of HER**
+    * **Performance:** Achieved **100% Success Rate** with a converged reward of **-0.5** (indicating minimal distance to goal).
+    * **Insight:** Standard RL algorithms struggled here due to sparse rewards. The integration of **Hindsight Experience Replay (HER)** was the turning point; it allowed the agent to learn from failed parking attempts by treating them as successful "virtual" goals, drastically accelerating convergence.
+
+3.  **Roundabout (Orange Line): Balancing Flow & Safety**
+    * **Performance:** Plateaued at **75% Success Rate** with a mean reward of **~58**.
+    * **Insight:** This environment is highly interactive. While the agent mastered the circular geometry, the remaining 25% failure rate is largely due to "defensive hesitation"—the agent sometimes yields too long to incoming traffic, causing timeouts, or gets cut off by aggressive external vehicles.
+
+4.  **Merge (Blue Line): Mastering Speed Matching**
+    * **Performance:** Climbed to **100% Success Rate** with a reward of **~74** (near-theoretical max).
+    * **Insight:** The agent initially caused crashes by merging too slowly. Around step 100k, a distinct behavioural shift occurred: the agent learned to **accelerate** on the ramp to match the highway traffic speed *before* merging, making the policy robust and safe.
+
+5.  **Intersection (Green Line): The Reward Hacking Trap**
+    * **Performance:** Peaked at **90% Success Rate** (Step ~80k) but regressed to **40%** in later stages.
+    * **Insight:** This is a classic case of reward hacking. The agent discovered that "rushing" through the intersection maximized the speed reward ($\alpha$) enough to offset the occasional collision penalty ($\beta$). To fix this, the collision penalty needs to be significantly increased relative to the speed reward in future iterations.
+
+6.  **Racetrack (Grey Line): Forgetting**
+    * **Performance:** Peaked at **50% Success Rate** (Step ~100k) before degrading to **30%**.
+    * **Insight:** The agent suffered from **Catastrophic Forgetting**. As it attempted to optimize for higher speeds in the late training phase, the constant learning rate ($3 \times 10^{-4}$) caused the network to overwrite the delicate "safe cornering" weights it had learned earlier. Implementing *Early Stopping* or a *Learning Rate Decay* schedule is required to preserve peak performance.
 
 ---
 
@@ -342,4 +362,5 @@ Contributed to the implementation and training of reinforcement learning agents 
 Participated in reward function design and iterative tuning based on observed agent behaviour.
 Took part in debugging, hyperparameter optimization, and performance evaluation.
 Co-authored the README and analysis sections, including interpretation of training results.
+
 
